@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LAXI PREDICTOR 4.0</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Rajdhani:wght@500;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  
+  <style>
+      :root {
+          --PRIMARY-GREEN: #00FF41;
+          --DARK-BG: #0A0E0D;
+          --DARKER-BG: #050807;
+          --ACCENT-RED: #FF0033;
+          --BORDER-GREEN: #00FF4155;
+          --TEXT-WHITE: #FFFFFF;
+          --TEXT-GRAY: #A0A0A0;
+          --GLOW-GREEN: #00FF4180;
+          --WIN-GREEN: #2ecc71;
+          --LOSS-RED: #e74c3c;
+      }
+
+      * { 
+          margin: 0; 
+          padding: 0; 
+          box-sizing: border-box; 
+          -webkit-tap-highlight-color: transparent; 
+          outline: none; 
+          text-transform: uppercase;
+      }
+
+      body { 
+          font-family: 'Rajdhani', sans-serif; 
+          background: var(--DARKER-BG); 
+          color: var(--TEXT-WHITE); 
+          overflow-y: auto;  
+          min-height: 100vh; 
+      }
+      
+      .container, .main-content {
+          max-height: none !important;
+          overflow-y: visible !important;
+      }
+
+      #app { position: relative; min-height: 100vh; }
+
+      /* ANIMATED BACKGROUND */
+      .bg-container { 
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; 
+          background: radial-gradient(circle at 20% 50%, rgba(0, 255, 65, 0.03) 0%, transparent 50%), 
+                      radial-gradient(circle at 80% 50%, rgba(255, 0, 51, 0.02) 0%, transparent 50%), 
+                      linear-gradient(180deg, var(--DARKER-BG) 0%, var(--DARK-BG) 100%); 
+      }
+
+      .grid-overlay { 
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+          background-image: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px), 
+                            linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px); 
+          background-size: 50px 50px; animation: gridMove 20s linear infinite; 
+      }
+
+      @keyframes gridMove { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+
+      .glow-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15; animation: float 15s ease-in-out infinite; }
+      .orb-1 { width: 400px; height: 400px; background: var(--PRIMARY-GREEN); top: -100px; right: -100px; }
+      .orb-2 { width: 300px; height: 300px; background: var(--ACCENT-RED); bottom: -80px; left: -80px; animation-delay: 2s; }
+
+      @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -30px) scale(1.1); } }
+
+      .scan-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0, 255, 65, 0.03) 0px, transparent 2px, transparent 4px); pointer-events: none; }
+
+      /* LIVE GREEN PARTICLES */
+      .particle { 
+          position: absolute; width: 4px; height: 4px; background: var(--PRIMARY-GREEN); 
+          border-radius: 50%; animation: particleFloat linear infinite; opacity: 0.7;
+          box-shadow: 0 0 8px var(--PRIMARY-GREEN);
+      }
+
+      @keyframes particleFloat { 
+          0% { transform: translateY(105vh) translateX(0); opacity: 0; } 
+          10% { opacity: 0.8; }
+          90% { opacity: 0.8; }
+          100% { transform: translateY(-10vh) translateX(80px); opacity: 0; } 
+      }
+
+      /* CORNER ACCENTS */
+      .corner-accent { position: absolute; width: 40px; height: 40px; border: 2px solid var(--BORDER-GREEN); z-index: 1; pointer-events: none; }
+      .corner-accent::before, .corner-accent::after { content: ''; position: absolute; background: var(--PRIMARY-GREEN); }
+      .corner-accent::before { width: 8px; height: 2px; top: -2px; left: -2px; }
+      .corner-accent::after { width: 2px; height: 8px; top: -2px; left: -2px; }
+      .top-left { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+      .top-right { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+      .top-right::before, .top-right::after { left: auto; right: -2px; }
+      .bottom-left { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+      .bottom-left::before, .bottom-left::after { top: auto; bottom: -2px; }
+      .bottom-right { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+      .bottom-right::before, .bottom-right::after { top: auto; bottom: -2px; left: auto; right: -2px; }
+
+      /* MAIN DASHBOARD */
+      .main-dashboard { 
+          display: block; 
+          min-height: 100vh; 
+          padding: 20px 15px 90px 15px; 
+          width: 100%; 
+          max-width: 500px; 
+          margin: 0 auto; 
+          z-index: 5; 
+          position: relative;
+      }
+      
+      .card { background: rgba(10, 14, 13, 0.85); border: 1px solid var(--BORDER-GREEN); border-radius: 15px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+      label { font-size: 12px; color: var(--PRIMARY-GREEN); margin-bottom: 8px; display: block; font-family: 'Orbitron', sans-serif; font-weight: 700; letter-spacing: 1px; }
+      
+      select {
+          width: 100%; padding: 14px; border: 2px solid var(--BORDER-GREEN); border-radius: 10px;
+          font-family: 'Rajdhani', sans-serif; font-weight: 700; color: #FFF; background: var(--DARKER-BG); margin-bottom: 15px; font-size: 15px; letter-spacing: 1px;
+      }
+      select option { background: var(--DARK-BG); color: #FFF; }
+
+      .prediction-box { text-align: center; border: 2px solid var(--PRIMARY-GREEN); background: rgba(0,255,65,0.02); position: relative; box-shadow: 0 0 20px rgba(0,255,65,0.1); }
+      .period-info { font-size: 14px; color: var(--TEXT-GRAY); font-family: 'Orbitron', sans-serif; font-weight: 700; letter-spacing: 1px;}
+      #periodNum { color: var(--PRIMARY-GREEN); font-size: 18px; font-weight: 900; }
+      .timer-box { font-size: 48px; color: var(--PRIMARY-GREEN); font-family: 'Orbitron', sans-serif; font-weight: 900; margin: 10px 0; text-shadow: 0 0 15px rgba(0,255,65,0.4); }
+      #currentResult { font-size: 52px; font-family: 'Orbitron', sans-serif; font-weight: 900; min-height: 75px; color: var(--PRIMARY-GREEN); display: flex; align-items: center; justify-content: center; text-shadow: 0 0 10px rgba(0,255,65,0.2); }
+
+      /* PREMIUM STATS GRID */
+      .premium-stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15px;
+          margin-bottom: 20px;
+      }
+      .premium-stat-card {
+          background: rgba(5, 8, 7, 0.9);
+          border: 1px solid var(--BORDER-GREEN);
+          border-radius: 12px;
+          padding: 15px;
+          text-align: center;
+          box-shadow: 0 0 15px rgba(0, 255, 65, 0.05);
+          position: relative;
+          overflow: hidden;
+      }
+      .premium-stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; width: 4px; height: 100%;
+      }
+      .premium-stat-card.pass-card::before { background: var(--WIN-GREEN); }
+      .premium-stat-card.fail-card::before { background: var(--ACCENT-RED); }
+      .premium-stat-card.accuracy-card::before { background: #3498db; }
+      .premium-stat-card.bets-card::before { background: #f1c40f; }
+
+      .premium-stat-label {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: var(--TEXT-GRAY);
+          margin-bottom: 5px;
+      }
+      .premium-stat-value {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 28px;
+          font-weight: 900;
+      }
+      .pass-card .premium-stat-value { color: var(--WIN-GREEN); text-shadow: 0 0 10px rgba(46, 204, 113, 0.3); }
+      .fail-card .premium-stat-value { color: var(--ACCENT-RED); text-shadow: 0 0 10px rgba(255, 0, 51, 0.3); }
+      .accuracy-card .premium-stat-value { color: #3498db; text-shadow: 0 0 10px rgba(52, 152, 219, 0.3); }
+      .bets-card .premium-stat-value { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+      
+      /* HISTORY */
+      .history-item { background: rgba(10,14,13,0.9); padding: 14px 20px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--PRIMARY-GREEN); border-top: 1px solid rgba(21, 239, 85, 0.1); }
+
+      /* BOTTOM MENU NAVIGATION */
+      .bottom-nav { position: fixed; bottom: 0; left:0; width: 100%; height: 75px; background: var(--DARK-BG); border-top: 2px solid var(--BORDER-GREEN); display: flex; justify-content: space-around; align-items: center; z-index: 999; }
+      .nav-item { text-align: center; color: var(--TEXT-GRAY); text-decoration: none; font-size: 11px; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; width: 25%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 5px; cursor: pointer;}
+      .nav-item i { font-size: 20px; display: block; }
+      .nav-item.active { color: var(--PRIMARY-GREEN); background: rgba(0,255,65,0.03); text-shadow: 0 0 10px var(--GLOW-GREEN); }
+
+      /* IFRAME STREAM */
+      #gameIframe { width: 100%; height: 70vh; border: 2px solid var(--BORDER-GREEN); border-radius: 15px; background: #000; }
+
+      .sub-view { display: none; }
+      .sub-view.active { display: block; }
+
+      .profile-header { text-align: center; padding: 25px 10px; background: linear-gradient(180deg, rgba(0,255,65,0.1), transparent); border-radius: 15px; margin-bottom: 20px; border: 1px solid var(--BORDER-GREEN); }
+      .profile-avatar-box { width: 85px; height: 85px; background: var(--DARK-BG); border: 2px solid var(--PRIMARY-GREEN); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--GLOW-GREEN); }
+      .profile-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+      
+      .version-watermark { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); font-family: 'Orbitron', sans-serif; font-size: 10px; color: rgba(0, 255, 65, 0.2); letter-spacing: 1px; pointer-events: none; z-index: 1000; }
+      
+      html, body {
+          overflow-y: auto !important;
+          height: auto !important;
+          min-height: 100vh;
+      }
+  </style>
+</head>
+<body>
+<div id="app">
+    <div class="bg-container">
+        <div class="grid-overlay"></div>
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="scan-lines"></div>
+    </div>
+
+    <!-- MAIN DASHBOARD - DIRECT ACCESS NO LOGIN -->
+    <div class="main-dashboard" id="mainDashboardArea">
+        <!-- HOME TAB (DASHBOARD) -->
+        <div id="sub-home" class="sub-view active">
+            <div class="card">
+                <label>CHOOSE GAME INTERFACE</label>
+                <select id="gameSelect" onchange="startPredictor()">
+                    <option value="">-- SELECT GAME --</option>
+                    <option value="https://www.sikkim2.com/#/login">SIKKIM GAME</option>
+                    <option value="https://www.jalwagame.com/#/login">JALWA GAME</option>
+                    <option value="https://www.jaiclub18.com/#/login">JAI CLUB</option>
+                    <option value="https://bdg59.com/#/">BDG GAME</option>
+                    <option value="https://goaok.bet/#/login">GOA GAME</option>
+                    <option value="https://www.bigmumbai.win/#/login">BIGMUMBAI</option>
+                    <option value="https://www.in999ss.com/#/login">IN999</option>
+                    <option value="https://www.dmwin3.com/#/vip">DMWIN</option>
+                    <option value="https://www.diuwin7.com/#/login">DIUWIN</option>
+                </select>
+            </div>
+            
+            <div class="card" id="serverSelectCard" style="display: none;">
+                <label>CHOOSE SERVERS</label>
+                <select id="serverSelect" onchange="startPredictor()">
+                    <option value="BIG_SMALL">BIG / SMALL MODE</option>
+                    <option value="NUMBER">NUMBER MODE (JACKPOT)</option>
+                </select>
+            </div>
+
+            <div class="card prediction-box" id="predictionEngineCard" style="display: none;">
+                <div class="period-info">PERIOD NUMBER: <span id="periodNum">-------</span></div>
+                <div class="timer-box" id="countdownTimer">00:00</div>
+                <div id="currentResult">WAITING...</div>
+            </div>
+
+            <div class="premium-stats-grid" id="statsGridCard" style="display: none;">
+                <div class="premium-stat-card pass-card">
+                    <div class="premium-stat-label">PASS</div>
+                    <div class="premium-stat-value" id="winCount">0</div>
+                </div>
+                <div class="premium-stat-card fail-card">
+                    <div class="premium-stat-label">FAIL</div>
+                    <div class="premium-stat-value" id="lossCount">0</div>
+                </div>
+                <div class="premium-stat-card accuracy-card">
+                    <div class="premium-stat-label">ACCURACY</div>
+                    <div class="premium-stat-value" id="accuracyRate">100%</div>
+                </div>
+                <div class="premium-stat-card bets-card">
+                    <div class="premium-stat-label">BETS</div>
+                    <div class="premium-stat-value" id="totalBets">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME VIEW TAB -->
+        <div id="sub-game-view" class="sub-view">
+            <iframe id="gameIframe" src="" style="width: 100%; height: 70vh; border: 2px solid var(--BORDER-GREEN); border-radius: 15px; background: #000;"></iframe>
+        </div>
+
+        <!-- HISTORY TAB -->
+        <div id="sub-history" class="sub-view">
+            <h2 class="main-title" style="font-size: 24px; text-align: center; margin-bottom: 20px;">
+                <span class="title-word">PREDICTION HISTORY</span>
+            </h2>
+            <div id="historyLogList">
+                <div style="text-align: center; color: var(--TEXT-GRAY); padding: 20px;">NO HISTORY AVAILABLE. START GAME FIRST.</div>
+            </div>
+        </div>
+
+        <!-- PROFILE TAB -->
+        <div id="sub-profile" class="sub-view">
+            <div class="profile-header">
+                <div class="profile-avatar-box">
+                    <img src="https://i.ibb.co/LzdGZp7j/d9705768ebdc7cf235192a157731dac8.png" alt="LAXI" class="profile-logo">
+                </div>
+                <h2 style="font-family: 'Orbitron', sans-serif; font-size: 22px; color: #FFF; letter-spacing: 2px;">LAXI PREDICTOR VIP</h2>
+                <p style="color: var(--PRIMARY-GREEN); font-size: 11px; letter-spacing: 3px; margin-top: 5px;">PREMIUM ACCESS ACTIVATED</p>
+            </div>
+            <div class="card">
+                <label>SYSTEM STATUS</label>
+                <div style="font-family: 'Orbitron', sans-serif; color: var(--PRIMARY-GREEN); font-weight: 700; font-size: 15px; letter-spacing: 1px; padding: 5px 0;">◆ ACTIVE DIRECT MODE</div>
+            </div>
+            <div class="card">
+                <label>ACCESS TYPE</label>
+                <div style="font-family: 'Orbitron', sans-serif; color: #FFF; font-weight: 700; font-size: 15px; padding: 5px 0;">UNLIMITED / FULL FEATURE</div>
+            </div>
+            <button class="purchase-btn" style="border-color: var(--PRIMARY-GREEN); color: var(--PRIMARY-GREEN); margin-top: 15px; width:100%; padding:14px; font-family:'Orbitron'; font-weight:700; background:transparent; border:2px solid var(--PRIMARY-GREEN); cursor:pointer;" onclick="resetAllStats()">RESET STATS ⟳</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav" id="appBottomNavigation">
+        <div class="nav-item active" onclick="switchSubTab('home', this)"><i class="fa-solid fa-square-poll-vertical"></i><span>DASHBOARD</span></div>
+        <div class="nav-item" onclick="switchSubTab('game-view', this)"><i class="fa-solid fa-gamepad"></i><span>GAME</span></div>
+        <div class="nav-item" onclick="switchSubTab('history', this)"><i class="fa-solid fa-clock-rotate-left"></i><span>HISTORY</span></div>
+        <div class="nav-item" onclick="switchSubTab('profile', this)"><i class="fa-solid fa-user-shield"></i><span>PROFILE</span></div>
+    </nav>
+    <div class="version-watermark">LAXI PREDICTOR V4.0 • DIRECT ACCESS</div>
+</div>
+
+<script>
+    // ----------------------------------------------
+    //  WIN-GO PREDICTION ENGINE (NO LOGIN REQUIRED)
+    // ----------------------------------------------
+    
+    let activeTimerInterval = null;
+    let globalWinCount = 0;
+    let globalLossCount = 0;
+    let currentPeriodPrediction = null;
+    let predictionActive = false;
+    let lastIssue = null;
+    let processedIssues = new Set();
+    let gameHistoryArray = [];
+    let wasLastWinGlobal = null;
+    let currentLevel = 1;
+    let lastStrategyUsed = null;
+
+    // IMAGES FOR NUMBER MODE
+    const NUMBER_IMAGES = {
+        0: "https://i.postimg.cc/vZsq9nGm/num0-4-10.png",
+        1: "https://i.postimg.cc/mDt8RNyD/num0-4-6.png",
+        2: "https://i.postimg.cc/ryRQPjmw/num0-4-9.png",
+        3: "https://i.postimg.cc/HLP9S81T/num0-4-1.png",
+        4: "https://i.postimg.cc/K80Pz3zL/num0-4-2.png",
+        5: "https://i.postimg.cc/jj9y6Vyd/num0-4-11.png",
+        6: "https://i.postimg.cc/gjyRPnQV/num0-4-12.png",
+        7: "https://i.postimg.cc/NfYmkk2T/num0-4-4.png",
+        8: "https://i.postimg.cc/vHz9qxWb/num0-4-5.png",
+        9: "https://i.postimg.cc/wBtmjWnY/num0-4-15.png"
+    };
+
+    const NUMBER_SETS = [
+        [7, 9, 4], [5, 0, 6], [3, 2, 1], [6, 7, 8], [0, 5, 1],
+        [9, 2, 8], [4, 3, 0], [5, 7, 2], [1, 6, 9], [8, 4, 3]
+    ];
+
+    function getBigSmall(num) { return parseInt(num) >= 5 ? "BIG" : "SMALL"; }
+
+    // ADVANCED AI ENGINE
+    const ENGINE = {
+        CONFIG: { HISTORY_LIMIT: 30, BREAK_STREAK: 3, MAX_OPPOSITE_CHAIN: 2, TREND_THRESHOLD: 4, CRITICAL_LOSS_LIMIT: 5 },
+        STATE: { lossStreak: 0, winStreak: 0, lastPrediction: null, lastActual: null, oppositeCount: 0, trendFollowCount: 0, breakMode: false, breakRounds: 0, totalRoundsAnalyzed: 0 },
+        analyze(history) {
+            this.STATE.totalRoundsAnalyzed++;
+            if (!history || history.length < 5) {
+                let initialPred = Math.random() > 0.5 ? "BIG" : "SMALL";
+                this.STATE.lastPrediction = initialPred;
+                return { prediction: initialPred, confidence: 50, mode: "INITIALIZATION_RANDOM", scores: { BIG: 10, SMALL: 10 } };
+            }
+            let scores = { BIG: 0, SMALL: 0 };
+            let last20 = history.slice(0, this.CONFIG.HISTORY_LIMIT).map(h => getBigSmall(h.number));
+            let last5 = last20.slice(0, 5);
+            let latest = last20[0];
+            let currentStreak = 1;
+            for (let i = 1; i < last20.length; i++) { if (last20[i] === last20[0]) currentStreak++; else break; }
+            if (currentStreak >= 3) { let weight = currentStreak * 15; if (latest === "BIG") scores.SMALL += weight; else scores.BIG += weight; }
+            let bigCount5 = last5.filter(x => x === "BIG").length;
+            let smallCount5 = last5.filter(x => x === "SMALL").length;
+            if (bigCount5 >= 4 && currentStreak < 4) scores.BIG += 20;
+            if (smallCount5 >= 4 && currentStreak < 4) scores.SMALL += 20;
+            let alternating = true;
+            for (let i = 0; i < 4; i++) if (last5[i] === last5[i+1]) { alternating = false; break; }
+            if (alternating) { if (lates
